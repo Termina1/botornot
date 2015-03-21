@@ -27,8 +27,8 @@ replacebyHM <- function(hm, vec){
 botids <- list()
 botids[[1]] <- "68174509"
 botids[[2]] <- "257615752"
-botids[[3]] <- "147162672"
-botids[[4]] <- "12876"
+#botids[[3]] <- "147162672"
+#botids[[4]] <- "12876"
 
 
 #
@@ -67,28 +67,29 @@ for (i in 1:length(globalList)){
 #
 graphList <- list()
 for (k in 1:length(botids)){
-  for (i in 1:length(friendList[[k]])){
-    # all pairs of of ids in current friendList
-    upairs <- combn(replacebyHM(globalHM, friendList[[k]]), 2)
-    # adj matrix
-    m <- matrix(data = 0,
-                ncol=length(globalList),
-                nrow=length(globalList))
-    for (j in 1:ncol(upairs)){
-      curpair <- sort(upairs[,j])
-      friends <- globalFriends$friends[curpair]
-      m[curpair[1], curpair[2]] <- length(intersect(friends[[1]], friends[[2]]))
-    }
-    print(i)
-    # undirected graph => 
-    m <- forceSymmetric(m)
-    # select subgraph of friends
-    mind <- replacebyHM(globalHM, friendList[[k]])
-    m <- m[mind, mind]
-    g <- graph.adjacency(as.matrix(m), mode = "undirected")
-    # delete isolated vertices
-    g <- delete.vertices(g, which(!as.logical(degree(g))))
-    #write.graph(g, file = paste0("res/", botids[[k]], ".gml"), format = "gml")
-  }
+  # all pairs of of ids in current friendList
+  upairs <- combn(replacebyHM(globalHM, friendList[[k]]), 2)
+  pairList <- globalFriends$friends[upairs]
+  tupair <- data.table(t(upairs))
+  setnames(tupair, c("user1", "user2"))
+  tupair$mutual <- rep(0, nrow(tupair))
+  f1 <- seq(1, 2 * ncol(upairs), 2)
+  f2 <- seq(2, 2 * ncol(upairs), 2)
+  mutual <- sapply(c(1:nrow(tupair)), function(x){
+    res <- length(intersect(pairList[[f1[[x]]]], pairList[[f1[[x]]]]))
+    return(res)
+  })
+  tupair$mutual <- mutual
+  m <- sparseMatrix(i=tupair$user1,
+                    j=tupair$user2,
+                    x = tupair$mutual,
+                    dims = c(length(globalList), length(globalList)))
+  # select subgraph of friends
+  mind <- replacebyHM(globalHM, friendList[[k]])
+  m <- m[mind, mind]
+  g <- graph.adjacency(as.matrix(m), mode = "undirected")
+  # delete isolated vertices
+  g <- delete.vertices(g, which(!as.logical(degree(g))))
+  #write.graph(g, file = paste0("res/", botids[[k]], ".gml"), format = "gml")
   graphList[[k]] <- g
 }
