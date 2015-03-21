@@ -6,6 +6,7 @@ library(Matrix)
 #
 # get friends from vk api of current user
 #
+source("config.R")
 getFriends <- function (uid) {
   basic.data <- getURL(paste0("api.vk.com/method/friends.get?user_id=",
                               uid), ssl.verifypeer = FALSE)
