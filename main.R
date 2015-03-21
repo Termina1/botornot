@@ -3,13 +3,15 @@ library(data.table)
 library(rjson)
 library(igraph)
 library(Matrix)
+library(plyr)
 #
 # get friends from vk api of current user
 #
 source("config.R")
-getFriends <- function (uid) {
-  basic.data <- getURL(paste0("api.vk.com/method/friends.get?user_id=",
-                              uid), ssl.verifypeer = FALSE)
+getFriends <- function (uidList) {
+  print(length(uidList))
+  basic.data <- getURL(paste0("https://api.vk.com/method/execute.fastFriends?access_token=", accessToken, "&v=5.28&targets=",
+                              paste(compact(uidList), collapse=",")), ssl.verifypeer = FALSE)
   basic.data <- fromJSON(basic.data)$response
   return(basic.data)
 }
@@ -37,8 +39,13 @@ botids[[2]] <- "257615752"
 #
 
 friendList <- list()
-for (i in 1:length(botids)){
-  friendList[[i]] <- getFriends(botids[[i]])
+for (i in 1:ceiling(length(botids)/25)) {
+  lower = (i - 1) * 25
+  upper = lower + 25
+  friendResult <- getFriends(botids[lower:upper])
+  for(j in 1:length(friendResult)) {
+    friendList[lower + j] = friendResult[j]
+  }
   print(i)
 }
 
@@ -56,10 +63,13 @@ globalFriends <- list(id=c(1:length(globalList)),
 ## generating friends list for globalList
 #
 
-for (i in 1:length(globalList)){
-  friends <- getFriends(globalList[i])
+for (i in 0:(ceiling(length(globalList)/25) - 1)){
+  lower = i * 25
+  friends <- getFriends(globalList[lower:(lower + 24)])
   if (length(friends) != 0)
-    globalFriends$friends[i] <- list(replacebyHM(globalHM, friends))
+    for(j in 1:length(friends)) {
+      globalFriends$friends[(lower + j)] <- list(replacebyHM(globalHM, friends[j][[1]]))
+    }
   print(i)
 }
 
